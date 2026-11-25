@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WaveCut — Audio Cutter</title>
+<style>
+:root{--bg:#0a0d14;--panel:#111722;--panel2:#151e2b;--line:#263346;--muted:#8997aa;--text:#edf3fb;--accent:#8b5cf6;--cyan:#22d3ee;--green:#39d98a}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 50% -20%,#20213e 0%,#0a0d14 55%);color:var(--text);font:15px/1.5 Inter,ui-sans-serif,system-ui,Segoe UI,Arial;min-height:100vh}
+.wrap{max-width:1100px;margin:auto;padding:32px 22px 50px}.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:32px}.brand{display:flex;gap:12px;align-items:center;font-size:20px;font-weight:800;letter-spacing:-.5px}.logo{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--cyan));display:grid;place-items:center;color:white;font-size:20px;box-shadow:0 8px 28px #8b5cf644}.tag{color:var(--muted);font-size:12px;border:1px solid var(--line);padding:6px 10px;border-radius:30px}
+h1{font-size:clamp(30px,5vw,48px);line-height:1.05;letter-spacing:-1.8px;margin:0 0 10px}.grad{background:linear-gradient(90deg,#b69aff,#5ee7f5);-webkit-background-clip:text;background-clip:text;color:transparent}.sub{color:var(--muted);margin:0 0 28px}
+.card{background:linear-gradient(180deg,#151d2aee,#101722f5);border:1px solid var(--line);border-radius:20px;padding:22px;box-shadow:0 18px 60px #0005}.upload{border:1.5px dashed #45536b;border-radius:16px;padding:38px 18px;text-align:center;background:#0c121c;transition:.2s;cursor:pointer}.upload:hover,.upload.drag{border-color:var(--cyan);background:#101d29}.upload .ico{font-size:34px;margin-bottom:8px}.upload strong{display:block;font-size:17px}.upload p{margin:5px 0 14px;color:var(--muted);font-size:13px}.btn{border:0;border-radius:11px;padding:11px 16px;font-weight:700;cursor:pointer;color:white;background:linear-gradient(110deg,#8155ed,#5268e9);box-shadow:0 7px 22px #6d55dd35;transition:.15s}.btn:hover{filter:brightness(1.12);transform:translateY(-1px)}.btn:disabled{opacity:.35;cursor:not-allowed;transform:none}.btn.secondary{background:#202c3d;box-shadow:none;border:1px solid #33445c}.btn.green{background:linear-gradient(110deg,#16a875,#1c9dba)}input[type=file]{display:none}
+.filebar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:20px 0 12px;flex-wrap:wrap}.filename{font-weight:700;overflow-wrap:anywhere}.meta{color:var(--muted);font-size:12px}
+.wavebox{position:relative;background:#0a111b;border:1px solid #26364b;border-radius:14px;padding:14px 12px 10px;overflow:hidden}.wavehead{display:flex;justify-content:space-between;color:var(--muted);font-size:12px;margin-bottom:7px}canvas{width:100%;height:180px;display:block;cursor:crosshair;touch-action:pan-y}.timeaxis{display:flex;justify-content:space-between;color:#718198;font-size:10px;padding:4px 2px 0}
+.selection{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:16px 0 7px}.timefield{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px}.timefield input{width:92px;background:#0b121d;color:var(--text);border:1px solid #304057;border-radius:8px;padding:8px;font:600 13px ui-monospace,monospace}
+.rangearea{padding:4px 2px 12px}.rangearea input{width:100%;accent-color:var(--accent);cursor:pointer}.range-labels{display:flex;justify-content:space-between;color:var(--muted);font-size:11px}
+.controls{display:flex;align-items:center;justify-content:center;gap:10px;margin:17px 0 20px;flex-wrap:wrap}.play{width:48px;height:48px;border-radius:50%;font-size:18px;padding:0}.controlrow{display:grid;grid-template-columns:1fr 1fr;gap:14px}.setting{background:#0d1520;border:1px solid #253449;border-radius:12px;padding:13px}.setting label{display:block;color:var(--muted);font-size:12px;margin-bottom:7px}.setting input{width:100%;accent-color:var(--cyan)}.setting .val{float:right;color:var(--text);font-weight:700}
+.actions{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-top:20px;flex-wrap:wrap}.exportnote{color:var(--muted);font-size:12px}.status{color:var(--green);font-size:12px;min-height:18px;margin-top:10px}.hidden{display:none!important}
+@media(max-width:650px){.wrap{padding:22px 13px}.card{padding:14px}.controlrow{grid-template-columns:1fr}canvas{height:145px}.top{margin-bottom:25px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><div class="brand"><div class="logo">〽</div>WaveCut</div><div class="tag">100% in your browser · No upload</div></div>
+  <h1>Cut audio. <span class="grad">Keep the moment.</span></h1>
+  <p class="sub">Trim your audio with precision, preview the selection, and export it as a clean WAV file.</p>
+  <section class="card">
+    <div class="upload" id="drop">
+      <div class="ico">🎧</div><strong>Drop an audio file here</strong>
+      <p>MP3, WAV, M4A, AAC, OGG and other browser-supported audio</p>
+      <button class="btn" id="choose">Choose audio file</button>
+      <input id="file" type="file" accept="audio/*">
+    </div>
+    <div id="editor" class="hidden">
+      <div class="filebar"><div><div class="filename" id="filename">audio.mp3</div><div class="meta" id="details"></div></div><button class="btn secondary" id="change">Change file</button></div>
+      <div class="wavebox">
+        <div class="wavehead"><span>WAVEFORM · DRAG THE HANDLES TO TRIM</span><span id="durationText">00:00.0</span></div>
+        <canvas id="wave" width="1000" height="180"></canvas>
+        <div class="timeaxis"><span>0:00</span><span id="axisMid">0:00</span><span id="axisEnd">0:00</span></div>
+      </div>
+      <div class="selection">
+        <div class="timefield">START <input id="startText" type="text" value="0:00.0" aria-label="Start time"></div>
+        <div class="timefield">END <input id="endText" type="text" value="0:00.0" aria-label="End time"></div>
+        <div class="timefield">SELECTED <strong id="selectedText" style="color:#fff">0:00.0</strong></div>
+      </div>
+      <div class="rangearea">
+        <input id="start" type="range" min="0" max="1000" value="0" aria-label="Trim start">
+        <input id="end" type="range" min="0" max="1000" value="1000" aria-label="Trim end">
+        <div class="range-labels"><span>Start point</span><span>End point</span></div>
+      </div>
+      <div class="controls">
+        <button class="btn secondary" id="toStart">↤ Start</button>
+        <button class="btn play" id="play" title="Play selection" disabled>▶</button>
+        <button class="btn secondary" id="stop">■ Stop</button>
+        <button class="btn secondary" id="toEnd">End ↦</button>
+      </div>
+      <div class="controlrow">
+        <div class="setting"><label>FADE IN <span class="val" id="fadeInVal">0.0s</span></label><input id="fadeIn" type="range" min="0" max="5" step=".1" value="0"></div>
+        <div class="setting"><label>FADE OUT <span class="val" id="fadeOutVal">0.0s</span></label><input id="fadeOut" type="range" min="0" max="5" step=".1" value="0"></div>
+      </div>
+      <div class="actions"><div class="exportnote">Export format: WAV · Your audio stays on this device</div><button class="btn green" id="export" disabled>⬇ Export trimmed audio</button></div>
+      <div class="status" id="status" role="status"></div>
+    </div>
+  </section>
+</div>
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+let ctx, buffer, source=null, playing=false, playStarted=0, playOffset=0, raf=0, fileName='audio';
+const canvas=$('wave'), c=canvas.getContext('2d');
+const fmt=t=>{t=Math.max(0,t||0);let m=Math.floor(t/60),s=t-m*60;return `${m}:${s.toFixed(1).padStart(4,'0')}`};
+const parse=s=>{let p=s.trim().split(':');if(p.length===1)return Number(p[0]);if(p.length===2)return Number(p[0])*60+Number(p[1]);return NaN};
+const startTime=()=>Number($('start').value)/1000*buffer.duration;
+const endTime=()=>Number($('end').value)/1000*buffer.duration;
+function updateTimes(){if(!buffer)return;$('startText').value=fmt(startTime());$('endText').value=fmt(endTime());$('selectedText').textContent=fmt(endTime()-startTime());draw()}
+function draw(){
+ if(!buffer)return;const w=canvas.width,h=canvas.height,d=buffer.duration,st=startTime()/d*w,en=endTime()/d*w;
+ c.clearRect(0,0,w,h);c.fillStyle='#0a111b';c.fillRect(0,0,w,h);
+ for(let y=30;y<h;y+=30){c.strokeStyle='#1b2a3b';c.beginPath();c.moveTo(0,y);c.lineTo(w,y);c.stroke()}
+ const data=buffer.getChannelData(0), step=Math.max(1,Math.floor(data.length/w)), mid=h/2;
+ for(let x=0;x<w;x++){let mn=1,mx=-1;for(let j=0;j<step;j++){let v=data[x*step+j]||0;if(v<mn)mn=v;if(v>mx)mx=v}let inside=x>=st&&x<=en;c.strokeStyle=inside?'#53d6e8':'#536078';c.globalAlpha=inside?.95:.38;c.beginPath();c.moveTo(x,mid+mn*mid*.88);c.lineTo(x,mid+mx*mid*.88);c.stroke()}
+ c.globalAlpha=1;c.fillStyle='#070b12';c.globalAlpha=.58;c.fillRect(0,0,st,h);c.fillRect(en,0,w-en,h);c.globalAlpha=1;
+ c.strokeStyle='#b69aff';c.lineWidth=3;c.beginPath();c.moveTo(st,0);c.lineTo(st,h);c.moveTo(en,0);c.lineTo(en,h);c.stroke();
+ c.fillStyle='#b69aff';c.fillRect(st-5,0,10,13);c.fillRect(en-5,0,10,13);
+ if(playing){let x=playOffset/d*w;c.strokeStyle='#fff';c.lineWidth=2;c.beginPath();c.moveTo(x,0);c.lineTo(x,h);c.stroke()}
+}
+function stop(){if(source){try{source.stop()}catch(e){}source.disconnect();source=null}playing=false;cancelAnimationFrame(raf);$('play').textContent='▶';}
+function tick(){if(!playing)return;let t=playOffset+(ctx.currentTime-playStarted);if(t>=endTime()){stop();return}draw();raf=requestAnimationFrame(tick)}
+function play(){if(!buffer)return;if(!ctx)ctx=new (window.AudioContext||window.webkitAudioContext)();if(ctx.state==='suspended')ctx.resume();stop();let a=startTime(),b=endTime();if(b-a<.01)return;source=ctx.createBufferSource();source.buffer=buffer;source.connect(ctx.destination);source.start(0,a,b-a);playStarted=ctx.currentTime;playOffset=a;playing=true;$('play').textContent='Ⅱ';source.onended=()=>{if(playing)stop()};tick()}
+async function load(file){if(!file)return;if(!file.type.startsWith('audio/')){$('status').textContent='Please choose an audio file.';return}stop();try{if(!ctx)ctx=new (window.AudioContext||window.webkitAudioContext)();const arr=await file.arrayBuffer();buffer=await ctx.decodeAudioData(arr);fileName=file.name.replace(/\.[^.]+$/,'')||'audio';$('filename').textContent=file.name;$('details').textContent=`${buffer.numberOfChannels} channel(s) · ${buffer.sampleRate.toLocaleString()} Hz · ${(file.size/1024/1024).toFixed(2)} MB`;$('durationText').textContent=fmt(buffer.duration);$('axisMid').textContent=fmt(buffer.duration/2);$('axisEnd').textContent=fmt(buffer.duration);$('start').value=0;$('end').value=1000;$('start').max=1000;$('end').max=1000;$('fadeIn').value=0;$('fadeOut').value=0;$('editor').classList.remove('hidden');$('drop').classList.add('hidden');$('export').disabled=false;$('play').disabled=false;$('status').textContent='Audio loaded. Adjust the start and end points, then preview.';updateTimes()}catch(e){$('status').textContent='Could not read this audio format. Try converting it to WAV or MP3 first.'}}
+$('choose').onclick=()=> $('file').click();$('change').onclick=()=> $('file').click();$('file').onchange=e=>load(e.target.files[0]);
+$('drop').addEventListener('dragover',e=>{e.preventDefault();$('drop').classList.add('drag')});$('drop').addEventListener('dragleave',()=>$('drop').classList.remove('drag'));$('drop').addEventListener('drop',e=>{e.preventDefault();$('drop').classList.remove('drag');load(e.dataTransfer.files[0])});
+$('start').oninput=()=>{if(Number($('start').value)>=Number($('end').value))$('end').value=Math.min(1000,Number($('start').value)+1);stop();updateTimes()};
+$('end').oninput=()=>{if(Number($('end').value)<=Number($('start').value))$('start').value=Math.max(0,Number($('end').value)-1);stop();updateTimes()};
+function setText(which){let t=parse($(which+'Text').value);if(!Number.isFinite(t)||t<0||t>buffer.duration){$('status').textContent='Enter a time between 0 and '+fmt(buffer.duration);updateTimes();return}let v=Math.round(t/buffer.duration*1000);if(which==='start'){$('start').value=Math.min(v,Number($('end').value)-1)}else{$('end').value=Math.max(v,Number($('start').value)+1)}stop();updateTimes()}
+$('startText').onchange=()=>setText('start');$('endText').onchange=()=>setText('end');
+$('play').onclick=()=>playing?stop():play();$('stop').onclick=stop;$('toStart').onclick=()=>{stop();playOffset=startTime();play()};$('toEnd').onclick=()=>stop();
+$('fadeIn').oninput=()=>{$('fadeInVal').textContent=Number($('fadeIn').value).toFixed(1)+'s'};$('fadeOut').oninput=()=>{$('fadeOutVal').textContent=Number($('fadeOut').value).toFixed(1)+'s'};
+canvas.addEventListener('pointerdown',e=>{if(!buffer)return;const r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*1000;let ds=Math.abs(x-Number($('start').value)),de=Math.abs(x-Number($('end').value));if(ds<de){$('start').value=Math.max(0,Math.min(Number($('end').value)-1,Math.round(x)))}else{$('end').value=Math.min(1000,Math.max(Number($('start').value)+1,Math.round(x)))}stop();updateTimes()});
+function wavBlob(buf,a,b,fi,fo){const rate=buf.sampleRate,from=Math.floor(a*rate),to=Math.floor(b*rate),len=to-from,ch=buf.numberOfChannels,fadeIn=Math.floor(fi*rate),fadeOut=Math.floor(fo*rate),bytes=44+len*ch*2,ab=new ArrayBuffer(bytes),v=new DataView(ab);const write=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i))};write(0,'RIFF');v.setUint32(4,36+len*ch*2,true);write(8,'WAVE');write(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,ch,true);v.setUint32(24,rate,true);v.setUint32(28,rate*ch*2,true);v.setUint16(32,ch*2,true);v.setUint16(34,16,true);write(36,'data');v.setUint32(40,len*ch*2,true);let pos=44;const channels=Array.from({length:ch},(_,i)=>buf.getChannelData(i));for(let i=0;i<len;i++){let gain=1;if(fadeIn>0&&i<fadeIn)gain=Math.min(gain,i/fadeIn);let remain=len-1-i;if(fadeOut>0&&remain<fadeOut)gain=Math.min(gain,remain/fadeOut);for(let k=0;k<ch;k++){let s=Math.max(-1,Math.min(1,channels[k][from+i]*gain));v.setInt16(pos,s<0?s*32768:s*32767,true);pos+=2}}return new Blob([ab],{type:'audio/wav'})}
+$('export').onclick=()=>{if(!buffer)return;stop();let a=startTime(),b=endTime();if(b-a<.05){$('status').textContent='Select at least 0.05 seconds of audio.';return}let fi=Math.min(Number($('fadeIn').value),(b-a)/2),fo=Math.min(Number($('fadeOut').value),(b-a)/2);let blob=wavBlob(buffer,a,b,fi,fo),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=fileName+'-cut.wav';document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);$('status').textContent=`Exported ${fmt(b-a)} as WAV successfully.`};
+})();
+</script>
+</body>
+</html>
